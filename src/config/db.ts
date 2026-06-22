@@ -1,34 +1,35 @@
-import mongoose, {  ConnectOptions } from 'mongoose';
+import mongoose from 'mongoose';
+import { env } from './env.js';
+import logger from './logger.js';
+
+let monitoringRegistered = false;
+let isClosing = false;
 
 const connectDB = async (): Promise<void> => {
-  const proc = (globalThis as any).process;
-  try {
-    const uri = proc?.env?.MONGODB_URI ?? 'mongodb://localhost:27017/mydb';
+  const connection = await mongoose.connect(env.mongodbUri);
 
-    const conn = await mongoose.connect(uri, {} as ConnectOptions);
-
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
-
-    // Handle connection events (cast to any for compatibility with types)
-    (mongoose.connection as any).on('error', (err: Error) => {
-      console.error(`MongoDB connection error: ${err}`);
+  if (!monitoringRegistered) {
+    mongoose.connection.on('error', (error: Error) => {
+      logger.error('MongoDB connection error', { error });
     });
 
-    (mongoose.connection as any).on('disconnected', () => {
-      console.log('MongoDB disconnected');
+    mongoose.connection.on('disconnected', () => {
+      if (!isClosing) logger.warn('MongoDB disconnected unexpectedly');
     });
 
-    // Graceful shutdown
-    proc?.on?.('SIGINT', async () => {
-      await mongoose.connection.close();
-      console.log('MongoDB connection closed through app termination');
-      proc?.exit?.(0);
-    });
-
-    } catch (error) {
-    console.error(`Error connecting to MongoDB: ${(error as Error).message}`);
-    proc?.exit?.(1);
+    monitoringRegistered = true;
   }
+
+  logger.info('MongoDB connected', {
+    host: connection.connection.host,
+    database: connection.connection.name,
+  });
+};
+
+export const disconnectDB = async (): Promise<void> => {
+  isClosing = true;
+  await mongoose.connection.close();
+  logger.info('MongoDB connection closed');
 };
 
 export default connectDB;

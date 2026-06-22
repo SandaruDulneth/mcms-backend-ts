@@ -1,11 +1,13 @@
 {
   "name": "new-folder",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "MCMS Backend",
+  "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon",
+    "build": "tsc",
+    "start": "node dist/server.js",
     "typecheck": "tsc --noEmit"
   },
   "repository": {
@@ -27,6 +29,7 @@
     "mongoose": "^9.7.0"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^25.9.3",
     "nodemon": "^3.1.14",
