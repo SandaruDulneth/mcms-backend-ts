@@ -21,8 +21,7 @@ const connectDB = async (): Promise<void> => {
   }
 
   logger.info('MongoDB connected', {
-    host: connection.connection.host,
-    database: connection.connection.name,
+    database: connection.connection.name
   });
 };
 
