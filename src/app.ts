@@ -5,6 +5,7 @@ import { env } from './config/env.js';
 import logger from './config/logger.js';
 import { errorHandler } from './errors/error-handler.js';
 import { notFound } from './errors/not-found.js';
+import reportRouter from './routes/reportRoutes.js';
 
 const app = express();
 
@@ -37,6 +38,8 @@ app.get('/api/health', (_req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+app.use('/api/reports', reportRouter);
 
 app.use(notFound);
 app.use(errorHandler);

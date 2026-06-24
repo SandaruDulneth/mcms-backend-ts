@@ -52,7 +52,7 @@ const userReportSchema = new Schema<IUserReport>(
     crisisConfidence: {
       type: Number,
       min: 0,
-      max: 1,
+      max: 100,
     },
 
     messageType: {
@@ -63,7 +63,7 @@ const userReportSchema = new Schema<IUserReport>(
     messageTypeConfidence: {
       type: Number,
       min: 0,
-      max: 1,
+      max: 100,
     },
 
     urgencyLevel: {
@@ -75,7 +75,7 @@ const userReportSchema = new Schema<IUserReport>(
     urgencyConfidence: {
       type: Number,
       min: 0,
-      max: 1,
+      max: 100,
     },
 
     affectedCommunities: {
