@@ -6,13 +6,13 @@ import UserReportModel, {
 import { AppError } from '../errors/app-error.js';
 import { analyzeReportText } from './aiService.js';
 
-export type CreateUserReportInput = {
+export interface CreateUserReportInput {
   message: string;
   location?: string | undefined;
   sourceType?: SourceType | undefined;
-};
+}
 
-type UserReportCreatePayload = {
+interface UserReportCreatePayload {
   message: string;
   location?: string;
   crisisType?: string;
@@ -26,7 +26,7 @@ type UserReportCreatePayload = {
   latencyMs?: number;
   aiResponse?: Record<string, unknown>;
   sourceType: SourceType;
-};
+}
 
 const sourceTypes: SourceType[] = ['User Report', 'News API'];
 const urgencyLevels: UrgencyLevel[] = ['Low', 'Medium', 'High', 'Critical'];
@@ -69,4 +69,8 @@ export async function createUserReport(input: CreateUserReportInput): Promise<IU
   }
 
   return UserReportModel.create(reportPayload);
+}
+
+export async function getUserReports(): Promise<IUserReport[]> {
+  return UserReportModel.find().select('-aiResponse').sort({ createdAt: -1 });
 }
