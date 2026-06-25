@@ -9,8 +9,12 @@ export function validate(schema: ZodSchema, requestPart: RequestPart = 'body'): 
     const result = schema.safeParse(req[requestPart]);
 
     if (!result.success) {
+      const [firstIssue] = result.error.issues;
+      const issuePath = firstIssue?.path.length ? firstIssue.path.join('.') : requestPart;
+      const issueMessage = firstIssue?.message ?? 'Validation failed';
+
       next(
-        new AppError('Invalid request data', 400, 'VALIDATION_ERROR', {
+        new AppError(`Invalid request data: ${issuePath} - ${issueMessage}`, 400, 'VALIDATION_ERROR', {
           issues: result.error.issues,
         }),
       );

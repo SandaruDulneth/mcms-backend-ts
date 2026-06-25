@@ -21,6 +21,7 @@ interface UserReportCreatePayload {
   messageTypeConfidence?: number;
   urgencyLevel?: UrgencyLevel;
   urgencyConfidence?: number;
+  extractedLocations?: string[];
   affectedCommunities: string[];
   summary?: string;
   latencyMs?: number;
@@ -49,6 +50,9 @@ export async function createUserReport(input: CreateUserReportInput): Promise<IU
     throw new AppError('AI service returned an invalid urgency level', 502, 'INVALID_AI_URGENCY');
   }
 
+  const extractedLocations =
+  aiPrediction.location_extraction?.locations?.map((location) => location.text) ?? [];
+
   const reportPayload: UserReportCreatePayload = {
     message,
     crisisType: aiPrediction.crisis_type.crisis_type,
@@ -57,6 +61,7 @@ export async function createUserReport(input: CreateUserReportInput): Promise<IU
     messageTypeConfidence: aiPrediction.message_type.confidence,
     urgencyLevel,
     urgencyConfidence: aiPrediction.urgency.confidence,
+    extractedLocations,
     affectedCommunities: [],
     summary: aiPrediction.summary,
     latencyMs: aiPrediction.latency_ms,

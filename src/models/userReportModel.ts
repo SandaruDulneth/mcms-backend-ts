@@ -17,6 +17,8 @@ export interface IUserReport extends Document {
   urgencyLevel?: UrgencyLevel;
   urgencyConfidence?: number;
 
+  extractedLocations?: string[];
+
   affectedCommunities: string[];
 
   summary?: string;
@@ -77,6 +79,11 @@ const userReportSchema = new Schema<IUserReport>(
       min: 0,
       max: 100,
     },
+
+    extractedLocations: {
+     type: [String],
+     default: [],
+   },
 
     affectedCommunities: {
       type: [String],
