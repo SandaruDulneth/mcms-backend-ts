@@ -51,7 +51,12 @@ export async function createUserReport(input: CreateUserReportInput): Promise<IU
   }
 
   const extractedLocations =
-  aiPrediction.location_extraction?.locations?.map((location) => location.text) ?? [];
+    aiPrediction.location_extraction?.locations.map((location) => location.text) ?? [];
+  const affectedCommunities =
+    aiPrediction.community_extraction?.affected_communities.map(
+      (community) => community.community,
+    ) ?? [];
+  const resolvedLocation = trimmedLocation || extractedLocations.join(', ');
 
   const reportPayload: UserReportCreatePayload = {
     message,
@@ -62,15 +67,15 @@ export async function createUserReport(input: CreateUserReportInput): Promise<IU
     urgencyLevel,
     urgencyConfidence: aiPrediction.urgency.confidence,
     extractedLocations,
-    affectedCommunities: [],
+    affectedCommunities,
     summary: aiPrediction.summary,
     latencyMs: aiPrediction.latency_ms,
     aiResponse: aiPrediction,
     sourceType: input.sourceType ?? 'User Report',
   };
 
-  if (trimmedLocation) {
-    reportPayload.location = trimmedLocation;
+  if (resolvedLocation) {
+    reportPayload.location = resolvedLocation;
   }
 
   return UserReportModel.create(reportPayload);
@@ -79,3 +84,4 @@ export async function createUserReport(input: CreateUserReportInput): Promise<IU
 export async function getUserReports(): Promise<IUserReport[]> {
   return UserReportModel.find().select('-aiResponse').sort({ createdAt: -1 });
 }
+
