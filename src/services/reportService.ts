@@ -5,6 +5,7 @@ import UserReportModel, {
 } from '../models/userReportModel.js';
 import { AppError } from '../errors/app-error.js';
 import { analyzeReportText } from './aiService.js';
+import { geocodeLocations, type GeoLocation } from './geocodingService.js';
 
 export interface CreateUserReportInput {
   message: string;
@@ -22,6 +23,7 @@ interface UserReportCreatePayload {
   urgencyLevel?: UrgencyLevel;
   urgencyConfidence?: number;
   extractedLocations?: string[];
+  extractedLocationsGeo?: GeoLocation[];   // ← new: coordinates for map display
   affectedCommunities: string[];
   summary?: string;
   latencyMs?: number;
@@ -52,26 +54,42 @@ export async function createUserReport(input: CreateUserReportInput): Promise<IU
 
   const extractedLocations =
     aiPrediction.location_extraction?.locations.map((location) => location.text) ?? [];
+
   const affectedCommunities =
     aiPrediction.community_extraction?.affected_communities.map(
       (community) => community.community,
     ) ?? [];
+
   const resolvedLocation = trimmedLocation || extractedLocations.join(', ');
+
+  // Geocode extracted locations to get lat/long for map display.
+  // We pass the source field through so the frontend knows if it came from
+  // spaCy NER or the Sri Lanka gazetteer.
+  const locationsForGeocode =
+    aiPrediction.location_extraction?.locations.map((loc) => ({
+      text  : loc.text,
+      source: loc.source,
+    })) ?? [];
+
+  const extractedLocationsGeo = locationsForGeocode.length > 0
+    ? await geocodeLocations(locationsForGeocode)
+    : [];
 
   const reportPayload: UserReportCreatePayload = {
     message,
-    crisisType: aiPrediction.crisis_type.crisis_type,
-    crisisConfidence: aiPrediction.crisis_type.confidence,
-    messageType: aiPrediction.message_type.message_type,
-    messageTypeConfidence: aiPrediction.message_type.confidence,
+    crisisType            : aiPrediction.crisis_type.crisis_type,
+    crisisConfidence      : aiPrediction.crisis_type.confidence,
+    messageType           : aiPrediction.message_type.message_type,
+    messageTypeConfidence : aiPrediction.message_type.confidence,
     urgencyLevel,
-    urgencyConfidence: aiPrediction.urgency.confidence,
+    urgencyConfidence     : aiPrediction.urgency.confidence,
     extractedLocations,
+    extractedLocationsGeo,
     affectedCommunities,
-    summary: aiPrediction.summary,
-    latencyMs: aiPrediction.latency_ms,
-    aiResponse: aiPrediction,
-    sourceType: input.sourceType ?? 'User Report',
+    summary               : aiPrediction.summary,
+    latencyMs             : aiPrediction.latency_ms,
+    aiResponse            : aiPrediction,
+    sourceType            : input.sourceType ?? 'User Report',
   };
 
   if (resolvedLocation) {
@@ -84,4 +102,3 @@ export async function createUserReport(input: CreateUserReportInput): Promise<IU
 export async function getUserReports(): Promise<IUserReport[]> {
   return UserReportModel.find().select('-aiResponse').sort({ createdAt: -1 });
 }
-

@@ -40,13 +40,13 @@ export const fullPredictionResponseSchema = z.object({
     locations: z.array(locationItemSchema),
     location_count: z.number(),
     has_location: z.boolean(),
-  }).optional(),
+  }).nullish(),
 
-   community_extraction: z.object({
+  community_extraction: z.object({
     affected_communities: z.array(communityItemSchema),
     community_count: z.number(),
     has_community: z.boolean(),
-  }).optional(),
+  }).nullish(),
 
   latency_ms: z.number(),
   summary: z.string(),
