@@ -6,6 +6,7 @@ import logger from './config/logger.js';
 import { errorHandler } from './errors/error-handler.js';
 import { notFound } from './errors/not-found.js';
 import reportRouter from './routes/reportRoutes.js';
+import responderRoutes from './routes/responderRoutes.js';
 
 const app = express();
 
@@ -16,31 +17,32 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use((req, res, next) => {
   const startedAt = Date.now();
-
   res.on('finish', () => {
     logger.info('HTTP request completed', {
-      method: req.method,
-      path: req.originalUrl,
+      method    : req.method,
+      path      : req.originalUrl,
       statusCode: res.statusCode,
       durationMs: Date.now() - startedAt,
     });
   });
-
   next();
 });
 
 app.get('/api/health', (_req, res) => {
   const databaseConnected = mongoose.connection.readyState === 1;
   res.status(databaseConnected ? 200 : 503).json({
-    success: databaseConnected,
-    service: 'mcms-backend',
+    success : databaseConnected,
+    service : 'mcms-backend',
     database: databaseConnected ? 'connected' : 'disconnected',
     timestamp: new Date().toISOString(),
   });
 });
 
+// ── Routes ── register all routes BEFORE notFound and errorHandler ──────────
 app.use('/api/reports', reportRouter);
+app.use('/api/reports/:reportId/responders', responderRoutes);
 
+// ── Error handling — must be last ───────────────────────────────────────────
 app.use(notFound);
 app.use(errorHandler);
 
