@@ -11,16 +11,18 @@ function buildAiUrl(path: string): string {
 
 export async function analyzeReportText(text: string): Promise<FullPredictionResponse> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
+
+  // Increased to 30s — multilingual route makes 2 Gemini calls for non-English input
+  const timeout = setTimeout(() => controller.abort(), 30000);
 
   try {
-    const response = await fetch(buildAiUrl('/predict/full'), {
-      method: 'POST',
+    const response = await fetch(buildAiUrl('/predict/full/multilingual'), {
+      method : 'POST',
       headers: {
-        accept: 'application/json',
+        accept        : 'application/json',
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ text }),
+      body  : JSON.stringify({ text }),
       signal: controller.signal,
     });
 
