@@ -5,6 +5,7 @@ import { env } from './config/env.js';
 import logger from './config/logger.js';
 import { errorHandler } from './errors/error-handler.js';
 import { notFound } from './errors/not-found.js';
+import adminRouter from './routes/adminRoutes.js';
 import reportRouter from './routes/reportRoutes.js';
 import responderRoutes from './routes/responderRoutes.js';
 
@@ -41,6 +42,7 @@ app.get('/api/health', (_req, res) => {
 // ── Routes ── register all routes BEFORE notFound and errorHandler ──────────
 app.use('/api/reports', reportRouter);
 app.use('/api/reports/:reportId/responders', responderRoutes);
+app.use('/api/admin', adminRouter);
 
 // ── Error handling — must be last ───────────────────────────────────────────
 app.use(notFound);
