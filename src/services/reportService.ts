@@ -6,32 +6,41 @@ import UserReportModel, {
 import { AppError } from '../errors/app-error.js';
 import { analyzeReportText } from './aiService.js';
 import { geocodeLocations, type GeoLocation } from './geocodingService.js';
+import { calculateCredibility } from './credibilityService.js';
 
 export interface CreateUserReportInput {
-  message: string;
-  location?: string | undefined;
+  message    : string;
+  location?  : string | undefined;
   sourceType?: SourceType | undefined;
 }
 
 interface UserReportCreatePayload {
-  message: string;
-  location?: string;
-  crisisType?: string;
-  crisisConfidence?: number;
-  messageType?: string;
+  message              : string;
+  location?            : string;
+  crisisType?          : string;
+  crisisConfidence?    : number;
+  messageType?         : string;
   messageTypeConfidence?: number;
-  urgencyLevel?: UrgencyLevel;
-  urgencyConfidence?: number;
-  extractedLocations?: string[];
+  urgencyLevel?        : UrgencyLevel;
+  urgencyConfidence?   : number;
+  extractedLocations?  : string[];
   extractedLocationsGeo?: GeoLocation[];
-  affectedCommunities: string[];
-  summary?: string;
-  latencyMs?: number;
-  aiResponse?: Record<string, unknown>;
-  sourceType: SourceType;
+  affectedCommunities  : string[];
+  summary?             : string;
+  latencyMs?           : number;
+  aiResponse?          : Record<string, unknown>;
+  sourceType           : SourceType;
+  credibilityScore?    : number;
+  credibilityLabel?    : 'High' | 'Medium' | 'Low';
+  credibilitySources?  : {
+    newsHeadline   : string;
+    newsUrl        : string;
+    reliefWebMatch : string;
+    similarReports : number;
+  };
 }
 
-const sourceTypes: SourceType[] = ['User Report', 'News API'];
+const sourceTypes: SourceType[]   = ['User Report', 'News API'];
 const urgencyLevels: UrgencyLevel[] = ['Low', 'Medium', 'High', 'Critical'];
 
 function isSourceType(value: unknown): value is SourceType {
@@ -45,8 +54,10 @@ function isUrgencyLevel(value: unknown): value is UrgencyLevel {
 export async function createUserReport(input: CreateUserReportInput): Promise<IUserReport> {
   const message         = input.message.trim();
   const trimmedLocation = input.location?.trim();
-  const aiPrediction    = await analyzeReportText(message);
-  const urgencyLevel    = aiPrediction.urgency.urgency_level;
+
+  // ── Step 1: AI analysis ─────────────────────────────────────────────────
+  const aiPrediction = await analyzeReportText(message);
+  const urgencyLevel = aiPrediction.urgency.urgency_level;
 
   if (!isUrgencyLevel(urgencyLevel)) {
     throw new AppError('AI service returned an invalid urgency level', 502, 'INVALID_AI_URGENCY');
@@ -62,34 +73,35 @@ export async function createUserReport(input: CreateUserReportInput): Promise<IU
 
   const resolvedLocation = trimmedLocation || extractedLocations.join(', ');
 
-  // ── Build the list of locations to geocode ──────────────────────────────
-  // Start with AI-extracted locations
+  // ── Step 2: Geocoding ───────────────────────────────────────────────────
   const locationsForGeocode: Array<{ text: string; source: string }> =
     aiPrediction.location_extraction?.locations.map((loc) => ({
       text  : loc.text,
       source: loc.source,
     })) ?? [];
 
-  // Add user-provided location if:
-  //   1. The user actually typed one
-  //   2. It's not already in the AI-extracted list (case-insensitive dedup)
   if (trimmedLocation) {
     const alreadyExtracted = locationsForGeocode.some(
       (loc) => loc.text.toLowerCase() === trimmedLocation.toLowerCase(),
     );
     if (!alreadyExtracted) {
-      locationsForGeocode.push({
-        text  : trimmedLocation,
-        source: 'user_input',   // clearly tagged so frontend can distinguish
-      });
+      locationsForGeocode.push({ text: trimmedLocation, source: 'user_input' });
     }
   }
 
-  // Geocode all locations (AI extracted + user provided) in one pass
   const extractedLocationsGeo = locationsForGeocode.length > 0
     ? await geocodeLocations(locationsForGeocode)
     : [];
 
+  // ── Step 3: Credibility scoring ─────────────────────────────────────────
+  // Runs NewsAPI + ReliefWeb + database check in parallel automatically
+  const credibility = await calculateCredibility({
+    crisisType        : aiPrediction.crisis_type.crisis_type,
+    extractedLocations,
+    aiConfidence      : aiPrediction.crisis_type.confidence,
+  });
+
+  // ── Step 4: Build and save report ───────────────────────────────────────
   const reportPayload: UserReportCreatePayload = {
     message,
     crisisType            : aiPrediction.crisis_type.crisis_type,
@@ -105,6 +117,16 @@ export async function createUserReport(input: CreateUserReportInput): Promise<IU
     latencyMs             : aiPrediction.latency_ms,
     aiResponse            : aiPrediction,
     sourceType            : input.sourceType ?? 'User Report',
+
+    // Credibility fields
+    credibilityScore  : credibility.score,
+    credibilityLabel  : credibility.label,
+    credibilitySources: {
+      newsHeadline  : credibility.newsHeadline,
+      newsUrl       : credibility.newsUrl,
+      reliefWebMatch: credibility.reliefWebMatch,
+      similarReports: credibility.similarReports,
+    },
   };
 
   if (resolvedLocation) {
