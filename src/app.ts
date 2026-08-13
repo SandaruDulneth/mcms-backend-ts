@@ -6,6 +6,7 @@ import logger from './config/logger.js';
 import { errorHandler } from './errors/error-handler.js';
 import { notFound } from './errors/not-found.js';
 import adminRouter from './routes/adminRoutes.js';
+import externalDisasterRouter from './routes/externalDisasterRoutes.js';
 import reportRouter from './routes/reportRoutes.js';
 import responderRoutes from './routes/responderRoutes.js';
 
@@ -40,6 +41,7 @@ app.get('/api/health', (_req, res) => {
 });
 
 // ── Routes ── register all routes BEFORE notFound and errorHandler ──────────
+app.use('/api/external-disasters', externalDisasterRouter);
 app.use('/api/reports', reportRouter);
 app.use('/api/reports/:reportId/responders', responderRoutes);
 app.use('/api/admin', adminRouter);

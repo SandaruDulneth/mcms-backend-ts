@@ -8,6 +8,20 @@ import { AppError } from '../errors/app-error.js';
 const REPORT_STATUSES: ReportStatus[] = ['Pending', 'Active', 'In Progress', 'Resolved'];
 const RESPONDER_STATUSES: ResponderStatus[] = ['offered', 'en_route', 'arrived', 'completed'];
 
+// GET /api/admin/reports
+// Admin review endpoint: returns every report, including Pending reports that
+// are hidden from public ongoing-disaster pages.
+export const getAllReports: RequestHandler = async (_req, res, next) => {
+  try {
+    const reports = await UserReportModel.find()
+      .select('-aiResponse')
+      .sort({ createdAt: -1 });
+
+    res.json({ success: true, data: reports });
+  } catch (error) {
+    next(error);
+  }
+};
 // ── GET /api/admin/stats ─────────────────────────────────────────────────────
 export const getAdminStats: RequestHandler = async (_req, res, next) => {
   try {

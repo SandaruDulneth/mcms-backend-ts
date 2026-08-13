@@ -16,5 +16,6 @@ export const env = Object.freeze({
   mongodbUri   : process.env.MONGODB_URI    ?? 'mongodb://127.0.0.1:27017/mcms',
   clientOrigin : process.env.CLIENT_ORIGIN  ?? 'http://localhost:3000',
   aiServiceUrl : process.env.AI_SERVICE_URL ?? 'http://127.0.0.1:8000',
-  newsApiKey   : process.env.NEWS_API_KEY   ?? '',   // ← NewsAPI key for credibility scoring
+  newsApiKey    : process.env.NEWS_API_KEY    ?? '',
 });
+

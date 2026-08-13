@@ -19,7 +19,9 @@ export interface IGeoLocation {
 export interface ICredibilitySources {
   newsHeadline: string;   // Matching NewsAPI article title
   newsUrl: string;        // URL of the matching news article
-  reliefWebMatch: string; // Matching ReliefWeb disaster/event
+  gdacsMatch: string; // Matching GDACS disaster alert
+  gdacsUrl: string; // Link to matching GDACS alert
+  gdacsAlertLevel: string; // GDACS alert level
   similarReports: number; // Similar reports detected in the last 48 hours
 }
 
@@ -102,11 +104,20 @@ const credibilitySourcesSchema = new Schema(
       default: '',
     },
 
-    reliefWebMatch: {
+    gdacsMatch: {
       type: String,
       default: '',
     },
 
+    gdacsUrl: {
+      type: String,
+      default: '',
+    },
+
+    gdacsAlertLevel: {
+      type: String,
+      default: '',
+    },
     similarReports: {
       type: Number,
       default: 0,
