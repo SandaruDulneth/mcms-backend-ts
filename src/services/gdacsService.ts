@@ -1,3 +1,4 @@
+import { env } from '../config/env.js';
 import logger from '../config/logger.js';
 
 export interface GdacsEvent {
@@ -91,7 +92,7 @@ const CRISIS_ALIASES: Record<string, string[]> = {
   volcano: ['volcano', 'eruption', 'volcanic'],
 };
 
-let cachedEvents: { expiresAt: number; events: GdacsEvent[] } | null = null;
+let cachedEvents: { cacheKey: string; expiresAt: number; events: GdacsEvent[] } | null = null;
 
 function stripHtml(value: string): string {
   return value.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
@@ -99,6 +100,10 @@ function stripHtml(value: string): string {
 
 function normalizeText(value: string): string {
   return value.trim().toLowerCase();
+}
+
+function configuredCountryText(): string {
+  return `${env.externalIntelCountryIso3} ${env.externalIntelCountryName}`.toLowerCase();
 }
 
 function eventKey(properties: GdacsFeatureProperties): string {
@@ -117,13 +122,16 @@ function mapEventType(eventType: string, text: string): string {
   return 'disaster';
 }
 
-function isSriLankaFeature(properties: GdacsFeatureProperties): boolean {
+function isConfiguredCountryFeature(properties: GdacsFeatureProperties): boolean {
   const affectedCountryText = (properties.affectedcountries ?? [])
     .map((country) => `${country.iso3 ?? ''} ${country.countryname ?? ''}`)
     .join(' ');
 
-  const text = `${properties.iso3 ?? ''} ${properties.country ?? ''} ${affectedCountryText}`.toLowerCase();
-  return text.includes('lka') || text.includes('sri lanka');
+  const eventCountryText = `${properties.iso3 ?? ''} ${properties.country ?? ''} ${affectedCountryText}`.toLowerCase();
+  const countryIso3 = env.externalIntelCountryIso3.toLowerCase();
+  const countryName = env.externalIntelCountryName.toLowerCase();
+
+  return eventCountryText.includes(countryIso3) || eventCountryText.includes(countryName);
 }
 
 function featureRank(properties: GdacsFeatureProperties): number {
@@ -152,11 +160,30 @@ function featureToEvent(properties: GdacsFeatureProperties): GdacsEvent {
     eventType,
     disasterType: mapEventType(eventType, `${title} ${description}`),
     alertLevel: properties.alertlevel ?? properties.episodealertlevel ?? 'Unknown',
-    country: properties.country ?? 'Unknown',
-    iso3: properties.iso3 ?? '',
+    country: properties.country ?? env.externalIntelCountryName,
+    iso3: properties.iso3 ?? env.externalIntelCountryIso3,
     severity: severityText || (severityValue !== undefined ? `${severityValue} ${severityUnit}`.trim() : ''),
     population: '',
   };
+}
+
+function mockGdacsEvents(): GdacsEvent[] {
+  return [
+    {
+      id: `mock-gdacs-${env.externalIntelCountryIso3.toLowerCase()}-flood`,
+      title: `Mock GDACS Flood alert in ${env.externalIntelCountryName}`,
+      description: `Development mock GDACS alert for flood testing in ${env.externalIntelCountryName}.`,
+      url: 'https://www.gdacs.org/',
+      publishedAt: new Date().toISOString(),
+      eventType: 'FL',
+      disasterType: 'flood',
+      alertLevel: 'Orange',
+      country: env.externalIntelCountryName,
+      iso3: env.externalIntelCountryIso3,
+      severity: 'Development mock alert',
+      population: '',
+    },
+  ];
 }
 
 function parseGdacsEvents(data: unknown): GdacsEvent[] {
@@ -166,7 +193,7 @@ function parseGdacsEvents(data: unknown): GdacsEvent[] {
 
   for (const feature of features) {
     const properties = feature.properties;
-    if (!properties || !isSriLankaFeature(properties)) continue;
+    if (!properties || !isConfiguredCountryFeature(properties)) continue;
 
     const key = eventKey(properties);
     const rank = featureRank(properties);
@@ -197,15 +224,23 @@ function locationMatches(event: GdacsEvent, locations: string[]): boolean {
   if (locations.length === 0) return true;
 
   const text = `${event.iso3} ${event.country} ${event.title} ${event.description}`.toLowerCase();
+  const configuredText = configuredCountryText();
+
   return (
-    text.includes('sri lanka') ||
-    text.includes('lka') ||
+    text.includes(env.externalIntelCountryIso3.toLowerCase()) ||
+    text.includes(env.externalIntelCountryName.toLowerCase()) ||
+    configuredText.includes(text) ||
     locations.some((location) => text.includes(normalizeText(location)))
   );
 }
 
 export async function fetchGdacsEvents(): Promise<GdacsEvent[]> {
-  if (cachedEvents && cachedEvents.expiresAt > Date.now()) {
+  if (env.externalIntelMock) {
+    return mockGdacsEvents();
+  }
+
+  const cacheKey = `${env.externalIntelCountryIso3}:${env.externalIntelCountryName}`;
+  if (cachedEvents && cachedEvents.cacheKey === cacheKey && cachedEvents.expiresAt > Date.now()) {
     return cachedEvents.events;
   }
 
@@ -228,6 +263,7 @@ export async function fetchGdacsEvents(): Promise<GdacsEvent[]> {
     const events = parseGdacsEvents(data);
 
     cachedEvents = {
+      cacheKey,
       expiresAt: Date.now() + CACHE_TTL_MS,
       events,
     };
@@ -239,15 +275,20 @@ export async function fetchGdacsEvents(): Promise<GdacsEvent[]> {
   }
 }
 
-export async function fetchSriLankaGdacsEvents(): Promise<GdacsEvent[]> {
+export async function fetchConfiguredCountryGdacsEvents(): Promise<GdacsEvent[]> {
   return fetchGdacsEvents();
+}
+
+// Kept as a compatibility alias for older imports.
+export async function fetchSriLankaGdacsEvents(): Promise<GdacsEvent[]> {
+  return fetchConfiguredCountryGdacsEvents();
 }
 
 export async function checkGdacsMatch(
   crisisType: string,
   locations: string[],
 ): Promise<GdacsMatchResult> {
-  const events = await fetchSriLankaGdacsEvents();
+  const events = await fetchConfiguredCountryGdacsEvents();
   const match = events.find(
     (event) => crisisMatches(event, crisisType) && locationMatches(event, locations),
   );

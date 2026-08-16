@@ -2,11 +2,11 @@
  * Credibility Service
  *
  * Scores each disaster report using:
- * 1. NewsAPI        — real news coverage for crisis type + location
- * 2. GDACS          — official global disaster alert for Sri Lanka
- * 3. Own database   — similar user reports in the last 48 hours
- * 4. AI confidence  — model confidence from FastAPI
- * 5. Location found — specific location detected or provided
+ * 1. NewsAPI        - real news coverage for crisis type + location
+ * 2. GDACS          - official global disaster alert for the configured country
+ * 3. Own database   - similar user reports in the last 48 hours
+ * 4. AI confidence  - model confidence from FastAPI
+ * 5. Location found - specific location detected or provided
  */
 
 import mongoose from 'mongoose';
@@ -40,12 +40,20 @@ async function checkNewsApi(
   url: string;
   found: boolean;
 }> {
+  if (env.externalIntelMock) {
+    return {
+      headline: `Mock NewsAPI ${crisisType} report in ${env.externalIntelCountryName}`,
+      url: 'https://newsapi.org/',
+      found: true,
+    };
+  }
+
   if (!env.newsApiKey) {
     return { headline: '', url: '', found: false };
   }
 
   const location = locations[0] ?? '';
-  const query = encodeURIComponent(`${crisisType} ${location} Sri Lanka`.trim());
+  const query = encodeURIComponent(`${crisisType} ${location} ${env.externalIntelCountryName}`.trim());
   const url = [
     'https://newsapi.org/v2/everything',
     `?q=${query}`,

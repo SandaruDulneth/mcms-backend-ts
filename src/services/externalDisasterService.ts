@@ -1,6 +1,6 @@
 import { env } from '../config/env.js';
 import logger from '../config/logger.js';
-import { fetchSriLankaGdacsEvents } from './gdacsService.js';
+import { fetchConfiguredCountryGdacsEvents } from './gdacsService.js';
 
 export type ExternalDisasterSource = 'NewsAPI' | 'GDACS';
 
@@ -19,7 +19,7 @@ export interface ExternalDisasterItem {
 
 export interface ExternalDisasterFeed {
   fetchedAt: string;
-  country: 'Sri Lanka';
+  country: string;
   items: ExternalDisasterItem[];
   sources: {
     newsApi: {
@@ -93,11 +93,17 @@ function detectDisasterType(text: string): string {
 
 function detectLocation(text: string): string {
   const normalized = normalizeText(text);
+  const countryName = env.externalIntelCountryName;
+
+  if (normalized.includes(countryName.toLowerCase())) {
+    return countryName;
+  }
+
   const matches = SRI_LANKA_LOCATIONS.filter((location) =>
     normalized.includes(location.toLowerCase()),
   );
 
-  return matches.length > 0 ? matches.join(', ') : 'Sri Lanka';
+  return matches.length > 0 ? matches.join(', ') : countryName;
 }
 
 function compactDescription(value: string): string {
@@ -109,14 +115,45 @@ function itemKey(item: ExternalDisasterItem): string {
   return `${item.source}:${normalizeText(item.title)}:${item.publishedAt}`;
 }
 
+function buildNewsQuery(): string {
+  const country = env.externalIntelCountryName;
+  return [
+    `${country} flood`,
+    `${country} landslide`,
+    `${country} cyclone`,
+    `${country} earthquake`,
+    `${country} drought`,
+    `${country} tsunami`,
+  ].join(' OR ');
+}
+
+function mockNewsDisasters(): ExternalDisasterItem[] {
+  return [
+    {
+      id: `mock-news-${env.externalIntelCountryIso3.toLowerCase()}-flood`,
+      source: 'NewsAPI',
+      title: `Mock NewsAPI flood report in ${env.externalIntelCountryName}`,
+      disasterType: 'flood',
+      location: env.externalIntelCountryName,
+      description: `Development mock news article used for testing external intelligence and credibility scoring in ${env.externalIntelCountryName}.`,
+      url: 'https://newsapi.org/',
+      publishedAt: new Date().toISOString(),
+      sourceName: 'Mock NewsAPI',
+      status: 'reported',
+    },
+  ];
+}
+
 async function fetchNewsDisasters(): Promise<{ items: ExternalDisasterItem[]; error: string }> {
+  if (env.externalIntelMock) {
+    return { items: mockNewsDisasters(), error: '' };
+  }
+
   if (!env.newsApiKey) {
     return { items: [], error: 'NEWS_API_KEY is not configured' };
   }
 
-  const query = encodeURIComponent(
-    'Sri Lanka flood OR Sri Lanka landslide OR Sri Lanka cyclone OR Sri Lanka earthquake OR Sri Lanka drought OR Sri Lanka tsunami',
-  );
+  const query = encodeURIComponent(buildNewsQuery());
   const from = getRecentIsoDate(30);
   const url = [
     'https://newsapi.org/v2/everything',
@@ -144,7 +181,7 @@ async function fetchNewsDisasters(): Promise<{ items: ExternalDisasterItem[]; er
         return Boolean(article.title && article.url && isDisasterRelated(combinedText));
       })
       .map((article, index): ExternalDisasterItem => {
-        const title = article.title ?? 'Sri Lanka disaster update';
+        const title = article.title ?? `${env.externalIntelCountryName} disaster update`;
         const combinedText = `${title} ${article.description ?? ''}`;
 
         return {
@@ -170,18 +207,18 @@ async function fetchNewsDisasters(): Promise<{ items: ExternalDisasterItem[]; er
 
 async function fetchGdacsDisasters(): Promise<{ items: ExternalDisasterItem[]; error: string }> {
   try {
-    const events = await fetchSriLankaGdacsEvents();
+    const events = await fetchConfiguredCountryGdacsEvents();
 
     const items = events.map((event): ExternalDisasterItem => ({
       id: `gdacs-${event.id}`,
       source: 'GDACS',
       title: event.title,
       disasterType: event.disasterType,
-      location: event.country || 'Sri Lanka',
+      location: event.country || env.externalIntelCountryName,
       description: compactDescription(event.description || `${event.severity} ${event.population}`.trim()),
       url: event.url,
       publishedAt: event.publishedAt,
-      sourceName: 'GDACS / EC-JRC',
+      sourceName: env.externalIntelMock ? 'Mock GDACS' : 'GDACS / EC-JRC',
       status: event.alertLevel,
     }));
 
@@ -210,11 +247,11 @@ export async function getExternalDisasterFeed(): Promise<ExternalDisasterFeed> {
 
   return {
     fetchedAt: new Date().toISOString(),
-    country: 'Sri Lanka',
+    country: env.externalIntelCountryName,
     items,
     sources: {
       newsApi: {
-        enabled: Boolean(env.newsApiKey),
+        enabled: env.externalIntelMock || Boolean(env.newsApiKey),
         itemCount: newsApi.items.length,
         error: newsApi.error,
       },

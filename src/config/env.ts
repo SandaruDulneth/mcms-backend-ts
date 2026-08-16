@@ -10,12 +10,19 @@ const parsePort = (value: string | undefined): number => {
   return port;
 };
 
+const parseBoolean = (value: string | undefined): boolean => value?.toLowerCase() === 'true';
+
 export const env = Object.freeze({
   nodeEnv      : process.env.NODE_ENV       ?? 'development',
   port         : parsePort(process.env.PORT),
   mongodbUri   : process.env.MONGODB_URI    ?? 'mongodb://127.0.0.1:27017/mcms',
   clientOrigin : process.env.CLIENT_ORIGIN  ?? 'http://localhost:3000',
   aiServiceUrl : process.env.AI_SERVICE_URL ?? 'http://127.0.0.1:8000',
-  newsApiKey    : process.env.NEWS_API_KEY    ?? '',
-});
+  newsApiKey   : process.env.NEWS_API_KEY   ?? '',
 
+  // Development/testing helpers for external intelligence.
+  // Keep defaults as Sri Lanka for real project behavior.
+  externalIntelMock       : parseBoolean(process.env.EXTERNAL_INTEL_MOCK),
+  externalIntelCountryName: process.env.EXTERNAL_INTEL_COUNTRY_NAME ?? 'Sri Lanka',
+  externalIntelCountryIso3: (process.env.EXTERNAL_INTEL_COUNTRY_ISO3 ?? 'LKA').toUpperCase(),
+});
