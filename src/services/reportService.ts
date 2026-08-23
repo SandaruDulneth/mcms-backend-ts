@@ -18,6 +18,9 @@ export interface CreateUserReportInput {
 
 interface UserReportAnalysisPayload {
   location?: string;
+  detectedLanguage?: string;
+  wasTranslated?: boolean;
+  translatedText?: string;
   crisisType: string;
   crisisConfidence: number;
   messageType: string;
@@ -136,6 +139,9 @@ export async function createUserReport(input: CreateUserReportInput): Promise<IU
     });
 
     const reportPayload: UserReportAnalysisPayload = {
+      ...(aiPrediction.detected_language ? { detectedLanguage: aiPrediction.detected_language } : {}),
+      ...(aiPrediction.was_translated !== undefined ? { wasTranslated: aiPrediction.was_translated } : {}),
+      ...(aiPrediction.translated_text ? { translatedText: aiPrediction.translated_text } : {}),
       crisisType: aiPrediction.crisis_type.crisis_type,
       crisisConfidence: aiPrediction.crisis_type.confidence,
       messageType: aiPrediction.message_type.message_type,

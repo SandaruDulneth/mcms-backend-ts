@@ -29,6 +29,11 @@ export interface IUserReport extends Document {
   message: string;
   location?: string;
 
+  // Translation fields
+  detectedLanguage?: string;
+  wasTranslated?: boolean;
+  translatedText?: string;
+
   crisisType?: string;
   crisisConfidence?: number;
 
@@ -137,6 +142,21 @@ const userReportSchema = new Schema(
     },
 
     location: {
+      type: String,
+      trim: true,
+    },
+
+    detectedLanguage: {
+      type: String,
+      trim: true,
+    },
+
+    wasTranslated: {
+      type: Boolean,
+      default: false,
+    },
+
+    translatedText: {
       type: String,
       trim: true,
     },
