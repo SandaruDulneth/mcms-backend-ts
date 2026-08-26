@@ -20,6 +20,10 @@ export const env = Object.freeze({
   aiServiceUrl : process.env.AI_SERVICE_URL ?? 'http://127.0.0.1:8000',
   newsApiKey   : process.env.NEWS_API_KEY   ?? '',
 
+  adminUsername: process.env.ADMIN_USERNAME ?? '',
+  adminPassword: process.env.ADMIN_PASSWORD ?? '',
+  jwtSecret    : process.env.JWT_SECRET     ?? '',
+
   // Development/testing helpers for external intelligence.
   // Keep defaults as Sri Lanka for real project behavior.
   externalIntelMock       : parseBoolean(process.env.EXTERNAL_INTEL_MOCK),

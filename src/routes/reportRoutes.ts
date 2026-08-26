@@ -7,14 +7,16 @@ import {
 } from '../controllers/adminController.js';
 import { validate } from '../middleware/validate.js';
 import { createReportSchema } from '../validations/reportValidation.js';
+import { requireAdmin } from '../middleware/authMiddleware.js';
 
 const reportRouter = Router();
 
+// Public citizen operations
 reportRouter.route('/').get(getReports).post(validate(createReportSchema), createReport);
 
-// Admin operations on individual reports
-reportRouter.patch('/:id/status', updateReportStatus);
-reportRouter.delete('/:id', deleteReport);
-reportRouter.patch('/:id/responders/:responderId/status', updateResponderStatus);
+// Protected admin management operations
+reportRouter.patch('/:id/status', requireAdmin, updateReportStatus);
+reportRouter.delete('/:id', requireAdmin, deleteReport);
+reportRouter.patch('/:id/responders/:responderId/status', requireAdmin, updateResponderStatus);
 
 export default reportRouter;

@@ -23,9 +23,11 @@
   },
   "homepage": "https://github.com/SandaruDulneth/New-folder#readme",
   "dependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.7.0",
     "zod": "^4.4.3"
   },

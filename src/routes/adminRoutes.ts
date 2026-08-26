@@ -1,10 +1,22 @@
 import { Router } from 'express';
-import { getAdminStats, getAllReports, getAllResponders } from '../controllers/adminController.js';
+import {
+  adminLogin,
+  getAdminMe,
+  getAdminStats,
+  getAllReports,
+  getAllResponders,
+} from '../controllers/adminController.js';
+import { requireAdmin } from '../middleware/authMiddleware.js';
 
 const adminRouter = Router();
 
-adminRouter.get('/stats', getAdminStats);
-adminRouter.get('/reports', getAllReports);
-adminRouter.get('/responders', getAllResponders);
+// Public authentication endpoint
+adminRouter.post('/login', adminLogin);
+
+// Protected admin-only endpoints
+adminRouter.get('/me', requireAdmin, getAdminMe);
+adminRouter.get('/stats', requireAdmin, getAdminStats);
+adminRouter.get('/reports', requireAdmin, getAllReports);
+adminRouter.get('/responders', requireAdmin, getAllResponders);
 
 export default adminRouter;

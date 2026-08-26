@@ -1,8 +1,66 @@
 import type { RequestHandler } from 'express';
 import mongoose from 'mongoose';
+import jwt from 'jsonwebtoken';
 import UserReportModel, { type ReportStatus } from '../models/userReportModel.js';
 import ResponderModel, { type ResponderStatus } from '../models/responderModel.js';
 import { AppError } from '../errors/app-error.js';
+import { env } from '../config/env.js';
+
+// ── POST /api/admin/login ───────────────────────────────────────────────────
+export const adminLogin: RequestHandler = async (req, res, next) => {
+  try {
+    const { username, password } = req.body as { username?: string; password?: string };
+
+    if (!username || !password) {
+      throw new AppError('Username and password are required', 400, 'INVALID_CREDENTIALS');
+    }
+
+    if (!env.adminUsername || !env.adminPassword || !env.jwtSecret) {
+      throw new AppError(
+        'Server administrator authentication is not configured. Please check environment variables.',
+        500,
+        'SERVER_ERROR',
+      );
+    }
+
+    if (username.trim() !== env.adminUsername || password !== env.adminPassword) {
+      throw new AppError('Invalid administrator username or password.', 401, 'INVALID_CREDENTIALS');
+    }
+
+    const token = jwt.sign(
+      { username: env.adminUsername, role: 'admin' },
+      env.jwtSecret,
+      { expiresIn: '24h' },
+    );
+
+    res.json({
+      success: true,
+      data: {
+        token,
+        admin: {
+          username: env.adminUsername,
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ── GET /api/admin/me ───────────────────────────────────────────────────────
+export const getAdminMe: RequestHandler = async (_req, res, next) => {
+  try {
+    res.json({
+      success: true,
+      data: {
+        username: env.adminUsername,
+        role: 'admin',
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 // ── Valid enum values ────────────────────────────────────────────────────────
 const REPORT_STATUSES: ReportStatus[] = ['Pending', 'Active', 'In Progress', 'Resolved'];
