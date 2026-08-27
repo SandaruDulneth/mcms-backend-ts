@@ -127,7 +127,7 @@ function buildNewsQuery(): string {
   ].join(' OR ');
 }
 
-function mockNewsDisasters(): ExternalDisasterItem[] {
+export function mockNewsDisasters(): ExternalDisasterItem[] {
   return [
     {
       id: `mock-news-${env.externalIntelCountryIso3.toLowerCase()}-flood`,
@@ -135,7 +135,19 @@ function mockNewsDisasters(): ExternalDisasterItem[] {
       title: `Mock NewsAPI flood report in ${env.externalIntelCountryName}`,
       disasterType: 'flood',
       location: env.externalIntelCountryName,
-      description: `Development mock news article used for testing external intelligence and credibility scoring in ${env.externalIntelCountryName}.`,
+      description: `Development mock news article used for testing flood intelligence and credibility scoring in ${env.externalIntelCountryName}.`,
+      url: 'https://newsapi.org/',
+      publishedAt: new Date().toISOString(),
+      sourceName: 'Mock NewsAPI',
+      status: 'reported',
+    },
+    {
+      id: `mock-news-${env.externalIntelCountryIso3.toLowerCase()}-landslide`,
+      source: 'NewsAPI',
+      title: `Mock NewsAPI landslide report in ${env.externalIntelCountryName}`,
+      disasterType: 'landslide',
+      location: env.externalIntelCountryName,
+      description: `Development mock news article used for testing landslide intelligence and credibility scoring in ${env.externalIntelCountryName}.`,
       url: 'https://newsapi.org/',
       publishedAt: new Date().toISOString(),
       sourceName: 'Mock NewsAPI',

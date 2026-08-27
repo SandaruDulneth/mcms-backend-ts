@@ -13,6 +13,7 @@ import mongoose from 'mongoose';
 import { env } from '../config/env.js';
 import UserReportModel from '../models/userReportModel.js';
 import { checkGdacsMatch } from './gdacsService.js';
+import { mockNewsDisasters } from './externalDisasterService.js';
 
 export interface CredibilityResult {
   score: number;
@@ -32,6 +33,25 @@ interface CredibilityInput {
   currentReportId?: string;
 }
 
+const CRISIS_ALIASES: Record<string, string[]> = {
+  flood: ['flood', 'flash flood', 'flooding'],
+  earthquake: ['earthquake', 'seismic', 'tremor', 'quake'],
+  storm: ['storm', 'cyclone', 'tropical cyclone', 'typhoon', 'hurricane'],
+  wildfire: ['wildfire', 'forest fire', 'forest fires', 'fire', 'bushfire'],
+  tsunami: ['tsunami'],
+  landslide: ['landslide', 'mudslide'],
+  drought: ['drought'],
+  epidemic: ['epidemic', 'outbreak'],
+  volcano: ['volcano', 'eruption', 'volcanic'],
+};
+
+function crisisMatchesText(crisisType: string, text: string): boolean {
+  const normalizedCrisis = crisisType.trim().toLowerCase();
+  const aliases = CRISIS_ALIASES[normalizedCrisis] ?? [normalizedCrisis];
+  const targetText = text.toLowerCase();
+  return aliases.some((alias) => targetText.includes(alias));
+}
+
 async function checkNewsApi(
   crisisType: string,
   locations: string[],
@@ -41,11 +61,21 @@ async function checkNewsApi(
   found: boolean;
 }> {
   if (env.externalIntelMock) {
-    return {
-      headline: `Mock NewsAPI ${crisisType} report in ${env.externalIntelCountryName}`,
-      url: 'https://newsapi.org/',
-      found: true,
-    };
+    const mockArticles = mockNewsDisasters();
+    const match = mockArticles.find((article) => {
+      const fullText = `${article.disasterType} ${article.title} ${article.description}`;
+      return crisisMatchesText(crisisType, fullText);
+    });
+
+    if (match) {
+      return {
+        headline: match.title,
+        url: match.url,
+        found: true,
+      };
+    }
+
+    return { headline: '', url: '', found: false };
   }
 
   if (!env.newsApiKey) {
@@ -59,7 +89,7 @@ async function checkNewsApi(
     `?q=${query}`,
     '&language=en',
     '&sortBy=publishedAt',
-    '&pageSize=3',
+    '&pageSize=5',
     `&apiKey=${env.newsApiKey}`,
   ].join('');
 
@@ -78,18 +108,24 @@ async function checkNewsApi(
       totalResults?: number;
       articles?: Array<{
         title?: string;
+        description?: string;
         url?: string;
       }>;
     };
 
-    const firstArticle = data.articles?.[0];
+    if (data.status === 'ok' && data.articles && data.articles.length > 0) {
+      const matchingArticle = data.articles.find((article) => {
+        const text = `${article.title ?? ''} ${article.description ?? ''}`;
+        return crisisMatchesText(crisisType, text);
+      });
 
-    if (data.status === 'ok' && (data.totalResults ?? 0) > 0 && firstArticle) {
-      return {
-        headline: firstArticle.title ?? '',
-        url: firstArticle.url ?? '',
-        found: true,
-      };
+      if (matchingArticle) {
+        return {
+          headline: matchingArticle.title ?? '',
+          url: matchingArticle.url ?? '',
+          found: true,
+        };
+      }
     }
   } catch (err) {
     console.warn('[CredibilityService] NewsAPI error:', err);
