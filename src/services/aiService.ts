@@ -12,7 +12,7 @@ function buildAiUrl(path: string): string {
 export async function analyzeReportText(text: string): Promise<FullPredictionResponse> {
   const controller = new AbortController();
 
-  // Increased to 30s — multilingual route makes 2 Gemini calls for non-English input
+
   const timeout = setTimeout(() => controller.abort(), 30000);
 
   try {

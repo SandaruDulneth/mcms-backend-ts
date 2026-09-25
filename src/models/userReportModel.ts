@@ -5,24 +5,23 @@ export type ReportStatus = 'Pending' | 'Active' | 'In Progress' | 'Resolved';
 export type SourceType = 'User Report' | 'News API';
 export type CredibilityLabel = 'High' | 'Medium' | 'Low';
 
-// Coordinates for one extracted location — stored alongside the report
-// so the frontend can render map pins without calling Nominatim again.
+
 export interface IGeoLocation {
   name: string;
   lat: number;
   lng: number;
   displayName: string;
-  source: string; // "spacy_ner" or "gazetteer"
+  source: string; 
 }
 
 // Sources used when calculating the credibility score
 export interface ICredibilitySources {
-  newsHeadline: string;   // Matching NewsAPI article title
-  newsUrl: string;        // URL of the matching news article
-  gdacsMatch: string; // Matching GDACS disaster alert
-  gdacsUrl: string; // Link to matching GDACS alert
-  gdacsAlertLevel: string; // GDACS alert level
-  similarReports: number; // Similar reports detected in the last 48 hours
+  newsHeadline: string;   
+  newsUrl: string;        
+  gdacsMatch: string; 
+  gdacsUrl: string; 
+  gdacsAlertLevel: string; 
+  similarReports: number; 
 }
 
 export interface IUserReport extends Document {
@@ -92,7 +91,7 @@ const geoLocationSchema = new Schema(
     },
   },
   {
-    _id: false, // no separate _id for embedded documents
+    _id: false, 
   },
 );
 
@@ -237,10 +236,7 @@ const userReportSchema = new Schema(
       default: 'User Report',
     },
 
-    // ─────────────────────────────────────────────
-    // Credibility scoring
-    // ─────────────────────────────────────────────
-
+    
     // Overall credibility score between 0 and 100
     credibilityScore: {
       type: Number,

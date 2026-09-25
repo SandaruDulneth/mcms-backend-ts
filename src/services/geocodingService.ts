@@ -1,13 +1,4 @@
-/**
- * Geocoding Service — Nominatim (OpenStreetMap)
- *
- * Converts place name strings extracted by the AI service into
- * latitude/longitude coordinates. Nominatim is completely free,
- * requires no API key, and handles Sri Lankan place names well.
- *
- * Usage policy: one request at a time, 1 second between requests.
- * https://operations.osmfoundation.org/policies/nominatim/
- */
+
 
 const NOMINATIM_BASE = 'https://nominatim.openstreetmap.org/search';
 
@@ -22,16 +13,14 @@ const HEADERS = {
 };
 
 export interface GeoLocation {
-  name: string;         // original place name from AI extraction
+  name: string;         
   lat: number;
   lng: number;
-  displayName: string;  // full address string returned by Nominatim
-  source: string;       // "spacy_ner" or "gazetteer" — passed through from AI
+  displayName: string;  
+  source: string;       
 }
 
-/**
- * Geocode a single place name. Returns null if Nominatim finds no match.
- */
+
 async function geocodeSingle(
   placeName: string,
   source: string,
@@ -81,17 +70,12 @@ async function geocodeSingle(
   }
 }
 
-/**
- * Sleep helper — required to respect Nominatim's 1 req/sec rate limit.
- */
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/**
- * Geocode multiple place names sequentially (respects Nominatim rate limit).
- * Places that cannot be resolved are silently skipped.
- */
+
 export async function geocodeLocations(
   locations: Array<{ text: string; source: string }>,
 ): Promise<GeoLocation[]> {
@@ -105,7 +89,7 @@ export async function geocodeLocations(
       results.push(geo);
     }
 
-    // Respect Nominatim's rate limit — 1 request per second
+    
     if (i < locations.length - 1) {
       await sleep(1100);
     }

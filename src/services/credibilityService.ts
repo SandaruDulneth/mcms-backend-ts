@@ -1,14 +1,3 @@
-/**
- * Credibility Service
- *
- * Scores each disaster report using:
- * 1. NewsAPI        - real news coverage for crisis type + location
- * 2. GDACS          - official global disaster alert for the configured country
- * 3. Own database   - similar user reports in the last 48 hours
- * 4. AI confidence  - model confidence from FastAPI
- * 5. Location found - specific location detected or provided
- */
-
 import mongoose from 'mongoose';
 import { env } from '../config/env.js';
 import UserReportModel from '../models/userReportModel.js';
