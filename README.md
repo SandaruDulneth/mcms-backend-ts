@@ -1,4 +1,4 @@
-<![CDATA[# 🛡️ MCMS Backend — Node.js API Server
+# 🛡️ MCMS Backend — Node.js API Server
 
 > REST API backend for the **Multilingual Crisis Management System (MCMS)**.  
 > Receives citizen-submitted crisis reports, proxies them through an AI/NLP micro-service, computes a multi-source credibility score, and feeds a real-time operations dashboard.
@@ -273,4 +273,4 @@ The credibility service computes a score (0–100) for each report by combining:
 ## License
 
 This project is licensed under the **ISC License**.
-]]>
+
